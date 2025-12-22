@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战略幕僚系统 | Stanford Style</title>
+    <style>
+        :root { --stanford-red: #8C1515; --bg-gray: #F9F9F9; }
+        body { background: var(--bg-gray); display: flex; flex-direction: column; align-items: center; padding-top: 180px; padding-bottom: 300px; margin: 0; font-family: sans-serif; }
+
+        /* --- 修正：底部固定面板（解决缩进与手机适配） --- */
+        #side-monitor {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: #FFF; border-top: 3px solid #DDD;
+            padding: 20px 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 1001;
+            display: flex; justify-content: center; gap: 50px; transition: 0.5s;
+        }
+        #side-monitor.active { border-top-color: var(--stanford-red); }
+
+        .char-slot { opacity: 0.2; width: 320px; border-right: 1px solid #EEE; padding-right: 20px; transition: 0.5s; }
+        .char-slot.active { opacity: 1; }
+        .char-slot:last-child { border-right: none; }
+
+        /* 字体放大：人物画像 */
+        .char-name { font-size: 16px; font-weight: 800; color: #666; margin-bottom: 5px; } 
+        .char-slot.active .char-name { color: var(--stanford-red); }
+        .char-brief { font-size: 13px; color: #999; margin-bottom: 15px; }
+
+        .weight-box { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+        .weight-info { font-size: 10px; color: #999; display: flex; justify-content: space-between; }
+        .progress-bg { height: 4px; background: #EEE; overflow: hidden; }
+        .progress-fill { height: 100%; background: #DDD; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1); }
+        .char-slot.active .progress-fill { background: var(--stanford-red); }
+
+        /* 顶部节点：字体 14px */
+        #top-monitor { display: flex; gap: 24px; padding: 15px; background: #FFF; position: fixed; top: 0; width: 100%; justify-content: center; z-index: 1000; border-bottom: 2px solid var(--stanford-red); }
+        .node { width: 320px; padding: 12px; border: 1px solid #D5D5D5; cursor: pointer; background: #FFF; }
+        .node.active { border: 2px solid var(--stanford-red); }
+        .label { font-size: 14px; font-weight: 700; color: var(--stanford-red); text-transform: uppercase; margin-bottom: 5px; }
+
+        #analysis-stage { width: 850px; max-width: 95%; margin-bottom: 80px; }
+        .content-card { background: #FFF; padding: 30px; border-left: 8px solid var(--stanford-red); border: 1px solid #D5D5D5; margin-bottom: 20px; }
+        
+        .input-box { display: flex; width: 850px; max-width: 95%; margin-bottom: 100px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        input { flex: 1; padding: 20px; border: 1px solid #D5D5D5; font-size: 16px; outline: none; }
+        button { background: var(--stanford-red); color: #FFF; border: none; padding: 0 40px; font-weight: 700; cursor: pointer; }
+
+        /* 📱 手机版响应式自适应 */
+        @media (max-width: 768px) {
+            body { padding-top: 240px; }
+            #top-monitor { flex-direction: column; align-items: center; }
+            .node { width: 95%; }
+            #side-monitor { flex-direction: column; height: 280px; overflow-y: auto; align-items: center; padding: 20px; }
+            .char-slot { width: 95%; border-right: none; border-bottom: 1px solid #EEE; padding-bottom: 20px; }
+            .input-box { flex-direction: column; width: 95%; }
+            button { padding: 15px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="side-monitor">
+        <div id="slot-0" class="char-slot">
+            <div id="name-0" class="char-name">PENDING...</div>
+            <div id="brief-0" class="char-brief">等待数据接入...</div>
+            <div class="weight-box">
+                <div class="weight-info"><span>WILL / 权力意志</span><span id="v-will-0">0%</span></div>
+                <div class="progress-bg"><div id="b-will-0" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>MORAL / 道德成本</span><span id="v-moral-0">0%</span></div>
+                <div class="progress-bg"><div id="b-moral-0" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>COG / 认知格局</span><span id="v-cog-0">0%</span></div>
+                <div class="progress-bg"><div id="b-cog-0" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>BASE / 情感底色</span><span id="v-base-0">0%</span></div>
+                <div class="progress-bg"><div id="b-base-0" class="progress-fill"></div></div>
+            </div>
+        </div>
+        <div id="slot-1" class="char-slot">
+            <div id="name-1" class="char-name">OFFLINE</div>
+            <div id="brief-1" class="char-brief">未锁定博弈方...</div>
+            <div class="weight-box">
+                <div class="weight-info"><span>WILL</span><span id="v-will-1">0%</span></div>
+                <div class="progress-bg"><div id="b-will-1" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>MORAL</span><span id="v-moral-1">0%</span></div>
+                <div class="progress-bg"><div id="b-moral-1" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>COG</span><span id="v-cog-1">0%</span></div>
+                <div class="progress-bg"><div id="b-cog-1" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>BASE</span><span id="v-base-1">0%</span></div>
+                <div class="progress-bg"><div id="b-base-1" class="progress-fill"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="top-monitor">
+        <div class="node" onclick="confirmIntent('main')">
+            <div class="label">探测主要矛盾</div>
+            <div id="main-val" style="font-size:14px; font-weight:600;"></div>
+        </div>
+        <div class="node" onclick="confirmIntent('hidden')">
+            <div class="label">探测潜在意图</div>
+            <div id="hidden-val" style="font-size:14px; font-weight:600;"></div>
+        </div>
+    </div>
+
+    <div id="analysis-stage"></div>
+
+    <div class="input-box">
+        <input type="text" id="userInput" placeholder="输入博弈细节，启动人格扫描仪...">
+        <button onclick="detect()">启动分析</button>
+    </div>
+
+    <script>
+        let store = { main: "", hidden: "", raw: "", characters: [], facts: [] };
+
+        async function detect() {
+            const q = document.getElementById('userInput').value;
+            if(!q) return;
+            store.raw = q; // 永久记忆原始素材
+
+            try {
+                const res = await fetch(`/infer?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                
+                store.main = data.main; store.hidden = data.hidden; 
+                store.characters = data.characters; store.facts = data.facts;
+
+                // 启动染色动画
+                document.getElementById('side-monitor').classList.add('active');
+                data.characters.forEach((c, i) => {
+                    if(i > 1) return;
+                    document.getElementById(`slot-${i}`).classList.add('active');
+                    document.getElementById(`name-${i}`).innerText = c.name;
+                    document.getElementById(`brief-${i}`).innerText = c.brief;
+                    ['will', 'moral', 'cognitive', 'base'].forEach(k => {
+                        const id = k === 'cognitive' ? 'cog' : k;
+                        document.getElementById(`b-${id}-${i}`).style.width = c.weights[k] + '%';
+                        document.getElementById(`v-${id}-${i}`).innerText = c.weights[k] + '%';
+                    });
+                });
+
+                document.getElementById('main-val').innerText = data.main;
+                document.getElementById('hidden-val').innerText = data.hidden;
+                document.getElementById('analysis-stage').innerHTML += `
+                    <div class="content-card">
+                        <div style="color:var(--stanford-red); font-weight:900; margin-bottom:10px;">🧠 事实锁定：${data.facts.join(' | ')}</div>
+                        ${data.chat_reply.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+            } catch(e) { console.error(e); }
+        }
+
+        async function confirmIntent(type) {
+            const target = store[type]; if(!target) return;
+            const res = await fetch(`/analyze?target=${encodeURIComponent(target)}&raw=${encodeURIComponent(store.raw)}&chars=${JSON.stringify(store.characters)}&facts=${JSON.stringify(store.facts)}`);
+            const content = await res.text();
+            document.getElementById('analysis-stage').innerHTML += `<div class="content-card">${content.replace(/\n/g, '<br>')}</div>`;
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
