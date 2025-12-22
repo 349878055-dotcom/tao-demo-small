@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战略幕僚决策系统 | Stanford Style</title>
+    <style>
+        :root { 
+            --stanford-red: #8C1515; 
+            --bg-gray: #F9F9F9; 
+            --text-dark: #2E2D29; 
+            --border-light: #D5D5D5; 
+        }
+
+        body { 
+            background: var(--bg-gray); 
+            color: var(--text-dark); 
+            font-family: "Source Sans Pro", "PingFang SC", sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding-top: 180px; 
+            /* 关键：增加底部内边距，防止底部面板遮挡输入框 */
+            padding-bottom: 250px; 
+            margin: 0; 
+        }
+
+        /* --- 修正：将侧边面板改为底部固定仪表盘 --- */
+        #side-monitor {
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            height: auto; 
+            background: #FFF; 
+            /* 初始灰色顶部边框 */
+            border-top: 3px solid #DDD; 
+            padding: 15px 0; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.08); 
+            z-index: 1001;
+            display: flex; 
+            flex-direction: row; 
+            justify-content: center; 
+            gap: 60px; 
+            transition: all 0.5s ease;
+        }
+
+        #side-monitor.active { border-top-color: var(--stanford-red); }
+
+        .scanner-title { 
+            position: absolute; 
+            top: -12px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #FFF; 
+            padding: 2px 15px; 
+            font-weight: 900; 
+            font-size: 11px; 
+            color: #AAA; 
+            letter-spacing: 1.5px; 
+            border: 1px solid #DDD;
+        }
+
+        #side-monitor.active .scanner-title { 
+            color: var(--stanford-red); 
+            border-color: var(--stanford-red); 
+        }
+
+        .char-slot { 
+            opacity: 0.3; 
+            transition: opacity 0.5s ease; 
+            width: 320px; 
+            border-right: 1px solid #F0F0F0; 
+            padding-right: 20px;
+        }
+
+        .char-slot:last-child { border-right: none; }
+        .char-slot.active { opacity: 1; }
+
+        /* --- 字体调大：人物画像部分 --- */
+        .char-name { 
+            font-size: 16px; 
+            font-weight: 800; 
+            color: #666; 
+            margin-bottom: 4px; 
+        }
+
+        .char-slot.active .char-name { color: var(--stanford-red); }
+
+        .char-brief { 
+            font-size: 13px; 
+            color: #BBB; 
+            line-height: 1.4; 
+            margin-bottom: 12px; 
+        }
+
+        .weight-box { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+        .weight-info { font-size: 10px; color: #999; display: flex; justify-content: space-between; text-transform: uppercase; }
+        .progress-bg { height: 4px; background: #EEE; border-radius: 1px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #DDD; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1), background 1s ease; }
+        .char-slot.active .progress-fill { background: var(--stanford-red); }
+
+        /* 顶部导航与内容区 */
+        #top-monitor { 
+            display: flex; 
+            gap: 24px; 
+            padding: 15px 40px; 
+            background: rgba(255,255,255,0.98); 
+            position: fixed; 
+            top: 0; 
+            width: 100%; 
+            box-sizing: border-box; 
+            justify-content: center; 
+            z-index: 1000; 
+            border-bottom: 2px solid var(--stanford-red); 
+        }
+
+        #top-utilities { position: absolute; right: 40px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-size: 11px; }
+        .util-btn { cursor: pointer; color: #888; font-weight: bold; }
+        .util-btn.active { color: var(--stanford-red); }
+
+        .node { width: 320px; padding: 12px 20px; border: 1px solid var(--border-light); cursor: pointer; background: #FFF; }
+        .node.active { border: 2px solid var(--stanford-red); }
+
+        /* --- 字体调大：顶部标签部分 --- */
+        .label { 
+            font-size: 14px; 
+            font-weight: 700; 
+            color: var(--stanford-red); 
+            text-transform: uppercase; 
+            margin-bottom: 5px;
+        }
+
+        .val { font-size: 14px; font-weight: 600; color: #444; min-height: 1.2em; }
+
+        #analysis-stage { width: 850px; margin-bottom: 80px; }
+        .history-entry { margin-bottom: 50px; border-top: 1px solid var(--border-light); padding-top: 30px; }
+        .basic-card { padding: 30px; background: #FFF; border: 1px solid var(--border-light); font-size: 16px; line-height: 1.8; }
+        .content-card { background: #FFF; border: 1px solid var(--border-light); padding: 40px; border-left: 8px solid var(--stanford-red); margin-bottom: 20px; }
+        .section-header { color: var(--stanford-red); font-size: 24px; font-weight: 800; border-bottom: 1px solid var(--stanford-red); padding-bottom: 10px; margin-bottom: 20px; display: block; }
+        
+        .input-box { display: flex; width: 850px; margin-bottom: 100px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        input { flex: 1; padding: 20px; border: 1px solid var(--border-light); font-size: 16px; outline: none; }
+        button { background: var(--stanford-red); border: none; color: #FFF; padding: 0 45px; cursor: pointer; font-weight: 700; text-transform: uppercase; }
+
+        @media (max-width: 1350px) {
+            #side-monitor { flex-wrap: wrap; justify-content: center; gap: 20px; }
+            .char-slot { width: 45%; border-right: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="side-monitor">
+        <div class="scanner-title">TARGET SCAN</div>
+        
+        <div id="slot-0" class="char-slot">
+            <div id="name-0" class="char-name">PENDING...</div>
+            <div id="brief-0" class="char-brief">Waiting for data...</div>
+            <div class="weight-box">
+                <div class="weight-info"><span>WILL / 权力意志</span><span id="v-will-0">0%</span></div>
+                <div class="progress-bg"><div id="b-will-0" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>MORAL / 道德成本</span><span id="v-moral-0">0%</span></div>
+                <div class="progress-bg"><div id="b-moral-0" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>COG / 认知格局</span><span id="v-cog-0">0%</span></div>
+                <div class="progress-bg"><div id="b-cog-0" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>BASE / 情感底色</span><span id="v-base-0">0%</span></div>
+                <div class="progress-bg"><div id="b-base-0" class="progress-fill"></div></div>
+            </div>
+        </div>
+
+        <div id="slot-1" class="char-slot">
+            <div id="name-1" class="char-name">OFFLINE</div>
+            <div id="brief-1" class="char-brief">No profile detected.</div>
+            <div class="weight-box">
+                <div class="weight-info"><span>WILL / 权力意志</span><span id="v-will-1">0%</span></div>
+                <div class="progress-bg"><div id="b-will-1" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>MORAL / 道德成本</span><span id="v-moral-1">0%</span></div>
+                <div class="progress-bg"><div id="b-moral-1" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>COG / 认知格局</span><span id="v-cog-1">0%</span></div>
+                <div class="progress-bg"><div id="b-cog-1" class="progress-fill"></div></div>
+            </div>
+            <div class="weight-box">
+                <div class="weight-info"><span>BASE / 情感底色</span><span id="v-base-1">0%</span></div>
+                <div class="progress-bg"><div id="b-base-1" class="progress-fill"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="top-monitor">
+        <div class="node" id="main-node" onclick="confirmIntent('main')">
+            <div class="label" id="lbl-main">探测主要矛盾</div>
+            <div id="main-val" class="val"></div>
+        </div>
+        <div class="node" id="hidden-node" onclick="confirmIntent('hidden')">
+            <div class="label" id="lbl-hidden">探测潜在意图</div>
+            <div id="hidden-val" class="val"></div>
+        </div>
+        <div id="top-utilities">
+            <div class="lang-group">
+                <span class="util-btn active" onclick="switchLang('zh')">ZH</span>
+                <span class="util-btn" onclick="switchLang('en')">EN</span>
+            </div>
+            <div class="util-btn" onclick="resetSystem()" style="color:var(--stanford-red); border:1px solid; padding:2px 8px; font-size:10px; cursor:pointer; margin-top:5px;">RESET</div>
+        </div>
+    </div>
+
+    <div id="analysis-stage"></div>
+
+    <div class="input-box">
+        <input type="text" id="userInput" placeholder="输入博弈素材进行扫描...">
+        <button onclick="detect()">启动分析</button>
+    </div>
+
+    <script>
+        let store = { main: "", hidden: "", raw: "", characters: [], facts: [], persona: "" };
+        let currentLang = 'zh';
+
+        function switchLang(lang) {
+            currentLang = lang;
+            document.getElementById('lbl-main').innerText = lang === 'zh' ? "探测主要矛盾" : "Primary Conflict";
+            document.getElementById('lbl-hidden').innerText = lang === 'zh' ? "探测潜在意图" : "Hidden Intent";
+        }
+
+        function resetSystem() {
+            store = { main: "", hidden: "", raw: "", characters: [], facts: [], persona: "" };
+            location.reload(); 
+        }
+
+        function robustParse(raw) {
+            let clean = raw.replace(/\\n/g, '\n');
+            const sections = clean.split(/(?=\d\.\s*【|###\s*)/g);
+            return sections.map(sec => {
+                if (sec.trim().length < 5) return "";
+                let formatted = sec.replace(/(\d\.\s*【|###\s*)(.*?)(】|\n|$)/, '<span class="section-header">$2</span>');
+                return `<div class="content-card">${formatted}</div>`;
+            }).join('');
+        }
+
+        async function detect() {
+            const inputField = document.getElementById('userInput');
+            const q = inputField.value;
+            if(!q) return;
+            store.raw = q;
+
+            try {
+                const res = await fetch(`/infer?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                
+                store.main = data.main;
+                store.hidden = data.hidden;
+                store.characters = data.characters || [];
+                store.facts = data.facts || [];
+                store.persona = data.persona_brief || "";
+
+                activateScanner(store.characters);
+
+                document.getElementById('main-val').innerText = data.main;
+                document.getElementById('hidden-val').innerText = data.hidden;
+                
+                const stage = document.getElementById('analysis-stage');
+                stage.innerHTML += `
+                    <div class="history-entry">
+                        <div class="basic-card">
+                            <div style="font-size:12px; color:var(--stanford-red); font-weight:900; margin-bottom:10px; border-bottom:1px solid #EEE; padding-bottom:5px;">🧠 事实锁定：${store.facts.join(' | ')}</div>
+                            ${data.chat_reply.replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+                inputField.value = '';
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            } catch(e) { console.error(e); }
+        }
+
+        function activateScanner(chars) {
+            document.getElementById('side-monitor').classList.add('active');
+            
+            chars.forEach((c, idx) => {
+                if (idx > 1) return; 
+                const slot = document.getElementById(`slot-${idx}`);
+                slot.classList.add('active');
+                
+                document.getElementById(`name-${idx}`).innerText = c.name;
+                document.getElementById(`brief-${idx}`).innerText = c.brief;
+                
+                const keys = { will: 'will', moral: 'moral', cognitive: 'cog', base: 'base' };
+                for (let k in keys) {
+                    const val = c.weights[k] || 0;
+                    document.getElementById(`b-${keys[k]}-${idx}`).style.width = val + '%';
+                    document.getElementById(`v-${keys[k]}-${idx}`).innerText = val + '%';
+                }
+            });
+        }
+
+        async function confirmIntent(type) {
+            const target = store[type];
+            if(!target) return;
+            const stage = document.getElementById('analysis-stage');
+            const entryId = 'entry-' + Date.now();
+            stage.innerHTML += `<div class="history-entry" id="${entryId}"><div style="text-align:center; color:var(--stanford-red);">正在执行全维度博弈推演...</div></div>`;
+            
+            try {
+                const params = new URLSearchParams({
+                    target: target,
+                    raw: store.raw,
+                    chars: JSON.stringify(store.characters),
+                    facts: JSON.stringify(store.facts),
+                    persona: store.persona
+                });
+                const res = await fetch(`/analyze?${params.toString()}`);
+                const content = await res.text();
+                document.getElementById(entryId).innerHTML = `
+                    <div style="color:var(--stanford-red); font-weight:bold; margin-bottom:20px; font-size:14px;">策略重心确认: ${target}</div>
+                    ${robustParse(content)}
+                `;
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            } catch(e) { console.error(e); }
+        }
+    </script>
+</body>
+</html>
