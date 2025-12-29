@@ -1,0 +1,23 @@
+<style>
+    :root { --ink-black: #1a1a1a; --ghost-white: #f5f5f5; }
+    body { font-family: "Inter", sans-serif; background: var(--ghost-white); color: var(--ink-black); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+    
+    /* 历史记录：逻辑留白处 */
+    #history-stack { flex: 1; overflow-y: auto; padding: 40px 20% 150px; scroll-behavior: smooth; }
+    .entry { margin-bottom: 30px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+    .query { font-weight: 800; font-size: 1.2rem; color: #888; }
+    .answer { line-height: 1.6; margin-top: 10px; }
+
+    /* 输入锚点：Google 级简化 */
+    .input-zone { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); width: 60%; background: #fff; border: 1px solid #ddd; border-radius: 30px; display: flex; padding: 10px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    input { flex: 1; border: none; outline: none; font-size: 18px; padding: 10px; }
+    button { background: none; border: none; cursor: pointer; font-weight: 800; color: #8C1515; }
+</style>
+
+<body>
+    <div id="history-stack"></div>
+    <div class="input-zone">
+        <input type="text" id="userInput" placeholder="输入变量，降临唯一一手...">
+        <button onclick="execute()">落子</button>
+    </div>
+</body>
